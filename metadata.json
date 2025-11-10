@@ -1,0 +1,5 @@
+{
+  "name": "ترابری سنگین",
+  "description": "An application for managing employees with separate panels for administrators and users. The initial view displays manager details in the admin panel.",
+  "requestFramePermissions": []
+}
