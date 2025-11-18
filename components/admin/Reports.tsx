@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import type { User, Vehicle, Trip, MaintenanceRecord } from '../../types';
 
@@ -34,6 +35,12 @@ const TabButton: React.FC<{ label: string; isActive: boolean; onClick: () => voi
         {label}
     </button>
 );
+
+const roleDisplay: Record<User['role'], string> = {
+    ADMIN: 'مدیر',
+    USER: 'کاربر',
+    WORKSHOP: 'تعمیرکار'
+};
 
 
 const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRecords }) => {
@@ -85,10 +92,12 @@ const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRe
 
         switch(activeTab) {
             case 'personnel':
-                headers = ['نام کاربری', 'نقش', 'تاریخ ثبت نام', 'آخرین ورود'];
+                headers = ['نام کاربری', 'کد پرسنلی', 'شماره تماس', 'نقش', 'تاریخ ثبت نام', 'آخرین ورود'];
                 rows = filteredPersonnel.map(u => [
                     `"${u.username}"`,
-                    `"${u.role === 'ADMIN' ? 'مدیر' : 'کاربر'}"`,
+                    `"${u.personnelCode}"`,
+                    `"${u.phone}"`,
+                    `"${roleDisplay[u.role]}"`,
                     `"${new Date(u.registrationDate).toLocaleString('fa-IR')}"`,
                     `"${u.lastLogin ? new Date(u.lastLogin).toLocaleString('fa-IR') : 'هرگز'}"`,
                 ]);
@@ -151,7 +160,15 @@ const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRe
 
     const filteredPersonnel = useMemo(() => users.filter(u => u.username.toLowerCase().includes(searchTerm.toLowerCase())), [users, searchTerm]);
     const filteredVehicles = useMemo(() => vehicles.filter(v => v.type.toLowerCase().includes(searchTerm.toLowerCase()) || v.code.toLowerCase().includes(searchTerm.toLowerCase()) || v.plateNumber.includes(searchTerm)), [vehicles, searchTerm]);
-    const filteredTrips = useMemo(() => trips.filter(t => t.origin.toLowerCase().includes(searchTerm.toLowerCase()) || t.destination.toLowerCase().includes(searchTerm.toLowerCase())), [trips, searchTerm]);
+    const filteredTrips = useMemo(() =>
+        trips.filter(t => {
+            const driverName = userMap.get(t.driverId)?.toLowerCase() || '';
+            const term = searchTerm.toLowerCase();
+            return t.origin.toLowerCase().includes(term) ||
+                   t.destination.toLowerCase().includes(term) ||
+                   driverName.includes(term);
+        }),
+    [trips, searchTerm, userMap]);
     const filteredMaintenance = useMemo(() =>
         enrichedMaintenanceRecords.filter(m =>
             m.vehicleType.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -164,7 +181,7 @@ const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRe
         const placeholderText: Record<ReportView, string> = {
             personnel: 'جستجوی پرسنل...',
             vehicles: 'جستجوی خودرو (کد، نوع، پلاک)...',
-            trips: 'جستجوی سفر...',
+            trips: 'جستجوی سفر (راننده، مبدا، مقصد)...',
             maintenance: 'جستجوی تعمیرات (کد/نوع خودرو، پلاک، سرویس)...',
         };
         
@@ -213,19 +230,23 @@ const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRe
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
-                                <th className="th">نام کاربری</th>
-                                <th className="th">نقش</th>
-                                <th className="th">تاریخ ثبت نام</th>
-                                <th className="th">آخرین ورود</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">نام کاربری</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">کد پرسنلی</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">شماره تماس</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">نقش</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">تاریخ ثبت نام</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">آخرین ورود</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {filteredPersonnel.map(u => (
-                                <tr key={u.id} className="tr-hover">
-                                    <td className="td font-medium">{u.username}</td>
-                                    <td className="td">{u.role === 'ADMIN' ? 'مدیر' : 'کاربر'}</td>
-                                    <td className="td">{new Date(u.registrationDate).toLocaleString('fa-IR')}</td>
-                                    <td className="td">{u.lastLogin ? new Date(u.lastLogin).toLocaleString('fa-IR') : 'هرگز'}</td>
+                                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{u.username}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{u.personnelCode}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{u.phone}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{roleDisplay[u.role]}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{new Date(u.registrationDate).toLocaleString('fa-IR')}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{u.lastLogin ? new Date(u.lastLogin).toLocaleString('fa-IR') : 'هرگز'}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -235,25 +256,25 @@ const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRe
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
-                                <th className="th">کد خودرو</th>
-                                <th className="th">نوع خودرو</th>
-                                <th className="th">شماره پلاک</th>
-                                <th className="th">راننده</th>
-                                <th className="th">وضعیت</th>
-                                <th className="th">آخرین سرویس</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">کد خودرو</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">نوع خودرو</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">شماره پلاک</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">راننده</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">وضعیت</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">آخرین سرویس</th>
                             </tr>
                         </thead>
                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {filteredVehicles.map(v => {
                                 const lastMaintDate = lastMaintenanceMap.get(v.id);
                                 return (
-                                <tr key={v.id} className="tr-hover">
-                                    <td className="td font-medium">{v.code}</td>
-                                    <td className="td">{v.type}</td>
-                                    <td className="td">{v.plateNumber}</td>
-                                    <td className="td">{v.driverId ? userMap.get(v.driverId) || 'ناشناس' : '---'}</td>
-                                    <td className="td">{v.status}</td>
-                                    <td className="td">{lastMaintDate ? lastMaintDate.toLocaleDateString('fa-IR') : '---'}</td>
+                                <tr key={v.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{v.code}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{v.type}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{v.plateNumber}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{v.driverId ? userMap.get(v.driverId) || 'ناشناس' : '---'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{v.status}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{lastMaintDate ? lastMaintDate.toLocaleDateString('fa-IR') : '---'}</td>
                                 </tr>
                                 );
                             })}
@@ -264,25 +285,25 @@ const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRe
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
-                                <th className="th">خودرو</th>
-                                <th className="th">راننده</th>
-                                <th className="th">مبدا</th>
-                                <th className="th">مقصد</th>
-                                <th className="th">تاریخ شروع</th>
-                                <th className="th">تاریخ پایان</th>
-                                <th className="th">وضعیت</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">خودرو</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">راننده</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">مبدا</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">مقصد</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">تاریخ شروع</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">تاریخ پایان</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">وضعیت</th>
                             </tr>
                         </thead>
                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {filteredTrips.map(t => (
-                                <tr key={t.id} className="tr-hover">
-                                    <td className="td font-medium">{vehicleMap.get(t.vehicleId) || 'ناشناس'}</td>
-                                    <td className="td">{userMap.get(t.driverId) || 'ناشناس'}</td>
-                                    <td className="td">{t.origin}</td>
-                                    <td className="td">{t.destination}</td>
-                                    <td className="td">{new Date(t.startDate).toLocaleString('fa-IR')}</td>
-                                    <td className="td">{t.endDate ? new Date(t.endDate).toLocaleString('fa-IR') : '---'}</td>
-                                    <td className="td">{t.status}</td>
+                                <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{vehicleMap.get(t.vehicleId) || 'ناشناس'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{userMap.get(t.driverId) || 'ناشناس'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{t.origin}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{t.destination}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{new Date(t.startDate).toLocaleString('fa-IR')}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{t.endDate ? new Date(t.endDate).toLocaleString('fa-IR') : '---'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{t.status}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -292,25 +313,25 @@ const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRe
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-700/50">
                             <tr>
-                                <th className="th">کد خودرو</th>
-                                <th className="th">نوع خودرو</th>
-                                <th className="th">شماره پلاک</th>
-                                <th className="th">وضعیت خودرو</th>
-                                <th className="th">نوع سرویس</th>
-                                <th className="th">تاریخ</th>
-                                <th className="th">هزینه (تومان)</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">کد خودرو</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">نوع خودرو</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">شماره پلاک</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">وضعیت خودرو</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">نوع سرویس</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">تاریخ</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">هزینه (تومان)</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                             {filteredMaintenance.map(m => (
-                                <tr key={m.id} className="tr-hover">
-                                    <td className="td font-medium">{m.vehicleCode}</td>
-                                    <td className="td">{m.vehicleType}</td>
-                                    <td className="td">{m.vehiclePlate}</td>
-                                    <td className="td">{m.vehicleStatus}</td>
-                                    <td className="td">{m.serviceType}</td>
-                                    <td className="td">{new Date(m.date).toLocaleDateString('fa-IR')}</td>
-                                    <td className="td">{costFormatter.format(m.cost)}</td>
+                                <tr key={m.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{m.vehicleCode}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{m.vehicleType}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{m.vehiclePlate}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{m.vehicleStatus}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{m.serviceType}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{new Date(m.date).toLocaleDateString('fa-IR')}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{costFormatter.format(m.cost)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -366,21 +387,11 @@ const Reports: React.FC<ReportsProps> = ({ users, vehicles, trips, maintenanceRe
 
     return (
         <div className="reports-container">
-            <style>{`
-                .th { padding: 0.75rem 1.5rem; text-align: right; font-size: 0.75rem; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; }
-                .dark .th { color: #9ca3af; }
-                .td { padding: 1rem 1.5rem; white-space: nowrap; font-size: 0.875rem; color: #4b5563; }
-                .dark .td { color: #d1d5db; }
-                .td.font-medium { font-weight: 500; color: #111827; }
-                .dark .td.font-medium { color: #f9fafb; }
-                .tr-hover:hover { background-color: #f9fafb; }
-                .dark .tr-hover:hover { background-color: rgba(156, 163, 175, 0.05); }
-            `}</style>
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4 sm:mb-0">
                     گزارشات ناوگان
                 </h2>
-                <div className="flex items-center space-x-2 space-x-reverse p-1 bg-gray-100 dark:bg-gray-700/50 rounded-lg">
+                <div className="flex items-center space-x-2 space-x-reverse p-1 bg-gray-100 dark:bg-gray-900/50 rounded-lg">
                     <TabButton label="پرسنل" isActive={activeTab === 'personnel'} onClick={() => { setActiveTab('personnel'); setSearchTerm(''); }} />
                     <TabButton label="خودروها" isActive={activeTab === 'vehicles'} onClick={() => { setActiveTab('vehicles'); setSearchTerm(''); }} />
                     <TabButton label="سفرها" isActive={activeTab === 'trips'} onClick={() => { setActiveTab('trips'); setSearchTerm(''); }} />

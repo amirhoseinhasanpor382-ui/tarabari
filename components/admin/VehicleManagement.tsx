@@ -23,23 +23,41 @@ const Alert: React.FC<{ message: string; onClose: () => void }> = ({ message, on
 const AddVehicleForm: React.FC<{ onAddVehicle: (code: string, type: string, plateNumber: string) => string | null }> = ({ onAddVehicle }) => {
   const [code, setCode] = useState('');
   const [type, setType] = useState('');
-  const [plateNumber, setPlateNumber] = useState('');
+  const [platePart1, setPlatePart1] = useState('');
+  const [platePart2, setPlatePart2] = useState('ب');
+  const [platePart3, setPlatePart3] = useState('');
+  const [platePart4, setPlatePart4] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const persianLetters = ['ب', 'ج', 'د', 'س', 'ص', 'ط', 'ق', 'ل', 'م', 'ن', 'و', 'ه', 'ی', 'الف', 'پ', 'ت', 'ث', 'ح', 'خ', 'ر', 'ز', 'ژ', 'ش', 'ع', 'ف', 'ک', 'گ'];
+
+  const handleNumericInputChange = (setter: React.Dispatch<React.SetStateAction<string>>, maxLength: number) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      if (/^\d*$/.test(value) && value.length <= maxLength) {
+          setter(value);
+      }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!code.trim() || !type.trim() || !plateNumber.trim()) {
-      setError('لطفا تمام فیلدها را پر کنید.');
+    if (!code.trim() || !type.trim() || !platePart1.trim() || !platePart3.trim() || !platePart4.trim() || platePart1.length !== 2 || platePart3.length !== 3 || platePart4.length !== 2) {
+      setError('لطفا تمام فیلدها را پر کرده و شماره پلاک را به درستی وارد کنید (مثال: ۱۱ ب ۱۲۳ ایران ۴۴).');
       return;
     }
+
+    const plateNumber = `${platePart1} ${platePart2} ${platePart3} ایران ${platePart4}`;
+    
     const result = onAddVehicle(code, type, plateNumber);
     if (result) {
         setError(result);
     } else {
         setCode('');
         setType('');
-        setPlateNumber('');
+        setPlatePart1('');
+        setPlatePart2('ب');
+        setPlatePart3('');
+        setPlatePart4('');
         alert('خودرو با موفقیت اضافه شد.');
     }
   };
@@ -76,16 +94,52 @@ const AddVehicleForm: React.FC<{ onAddVehicle: (code: string, type: string, plat
             </div>
         </div>
         <div>
-          <label htmlFor="vehicle-plate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">شماره پلاک</label>
-          <input
-            type="text"
-            id="vehicle-plate"
-            value={plateNumber}
-            onChange={(e) => setPlateNumber(e.target.value)}
-            required
-            className="mt-1 block w-full input-field"
-            placeholder="مثال: ۱۱ع۱۲۳ایران۴۴"
-          />
+          <label htmlFor="vehicle-plate-p1" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">شماره پلاک</label>
+          <div className="flex items-center gap-2 mt-1" dir="rtl">
+            <input
+              type="text"
+              id="vehicle-plate-p1"
+              value={platePart1}
+              onChange={handleNumericInputChange(setPlatePart1, 2)}
+              required
+              className="input-field text-center w-16"
+              placeholder="11"
+              aria-label="بخش اول پلاک"
+            />
+            <select
+              id="vehicle-plate-p2"
+              value={platePart2}
+              onChange={(e) => setPlatePart2(e.target.value)}
+              required
+              className="input-field text-center appearance-none bg-white dark:bg-gray-700 w-16"
+              aria-label="حرف پلاک"
+            >
+              {persianLetters.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+            <input
+              type="text"
+              id="vehicle-plate-p3"
+              value={platePart3}
+              onChange={handleNumericInputChange(setPlatePart3, 3)}
+              required
+              className="input-field text-center w-20"
+              placeholder="123"
+              aria-label="بخش سوم پلاک"
+            />
+            <div className="flex-grow flex items-center gap-2 border-r-2 border-gray-400 dark:border-gray-500 mr-2 pr-2">
+              <span className="text-gray-800 dark:text-gray-200 font-bold">ایران</span>
+              <input
+                type="text"
+                id="vehicle-plate-p4"
+                value={platePart4}
+                onChange={handleNumericInputChange(setPlatePart4, 2)}
+                required
+                className="input-field text-center w-16"
+                placeholder="44"
+                aria-label="کد استان پلاک"
+              />
+            </div>
+          </div>
         </div>
         <button
           type="submit"
@@ -292,17 +346,26 @@ const VehicleManagement: React.FC<VehicleManagementProps> = ({ vehicles, users, 
                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">راننده</th>
                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">وضعیت</th>
                     <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">آخرین سرویس</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">عملیات</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredVehicles.map((vehicle) => (
-                    <tr key={vehicle.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors duration-150" onClick={() => setSelectedVehicle(vehicle)}>
+                    <tr key={vehicle.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{vehicle.code}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{vehicle.type}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{vehicle.plateNumber}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{vehicle.driverId ? userMap.get(vehicle.driverId) || 'ناشناس' : '---'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{getStatusBadge(vehicle.status)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">{lastMaintenanceMap.get(vehicle.id) ? lastMaintenanceMap.get(vehicle.id)?.toLocaleDateString('fa-IR') : '---'}</td>
+                       <td className="px-6 py-4 whitespace-nowrap text-left text-sm font-medium">
+                        <button
+                          onClick={() => setSelectedVehicle(vehicle)}
+                          className="text-white bg-blue-600 hover:bg-blue-700 font-medium rounded-lg text-sm px-4 py-2 text-center transition-colors duration-200"
+                        >
+                          مشاهده تاریخچه
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

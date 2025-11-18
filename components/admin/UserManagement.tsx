@@ -4,7 +4,7 @@ import type { User, Vehicle } from '../../types';
 interface UserManagementProps {
   users: User[];
   vehicles: Vehicle[];
-  onAddUser: (username: string, password: string) => string | null;
+  onAddUser: (username: string, password: string, role: 'USER' | 'WORKSHOP', personnelCode: string, phone: string) => string | null;
   onChangePassword: (userId: string, newPassword: string) => string | null;
   onUpdateProfile: (userId: string, newUsername: string) => string | null;
   onAssignVehicle: (userId: string, vehicleId: string | null) => void;
@@ -21,25 +21,31 @@ const Alert: React.FC<{ message: string; onClose: () => void }> = ({ message, on
     );
 };
 
-const AddUserForm: React.FC<{ onAddUser: (username: string, password: string) => string | null }> = ({ onAddUser }) => {
+const AddUserForm: React.FC<{ onAddUser: (username: string, password: string, role: 'USER' | 'WORKSHOP', personnelCode: string, phone: string) => string | null }> = ({ onAddUser }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [personnelCode, setPersonnelCode] = useState('');
+  const [phone, setPhone] = useState('');
+  const [role, setRole] = useState<'USER' | 'WORKSHOP'>('USER');
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!username || !password) {
-      setError('لطفا نام کاربری و رمز عبور را وارد کنید.');
+    if (!username || !password || !personnelCode || !phone) {
+      setError('لطفا تمام فیلدهای اجباری را پر کنید.');
       return;
     }
-    const result = onAddUser(username, password);
+    const result = onAddUser(username, password, role, personnelCode, phone);
     if (result) {
         setError(result);
     } else {
         setUsername('');
         setPassword('');
-        // Optionally show a success message
+        setPersonnelCode('');
+        setPhone('');
+        setRole('USER');
+        alert('کاربر با موفقیت اضافه شد.');
     }
   };
 
@@ -48,27 +54,63 @@ const AddUserForm: React.FC<{ onAddUser: (username: string, password: string) =>
       <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">افزودن کاربر جدید</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <Alert message={error} onClose={() => setError(null)} />}
-        <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام کاربری</label>
-          <input
-            type="text"
-            id="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder="نام کاربری جدید"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نام کاربری</label>
+              <input
+                type="text"
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="نام کاربری جدید"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رمز عبور</label>
+              <input
+                type="password"
+                id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="رمز عبور (حداکثر ۸ کاراکتر)"
+              />
+            </div>
+            <div>
+              <label htmlFor="personnelCode" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">کد پرسنلی</label>
+              <input
+                type="text"
+                id="personnelCode"
+                value={personnelCode}
+                onChange={(e) => setPersonnelCode(e.target.value.replace(/\D/g, ''))}
+                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="کد پرسنلی"
+              />
+            </div>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">شماره تماس</label>
+              <input
+                type="tel"
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                placeholder="مثال: 09123456789"
+              />
+            </div>
         </div>
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">رمز عبور</label>
-          <input
-            type="password"
-            id="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:placeholder-gray-400 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder="رمز عبور (حداکثر ۸ کاراکتر)"
-          />
+         <div>
+          <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نقش</label>
+          <select 
+            id="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value as 'USER' | 'WORKSHOP')}
+            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          >
+              <option value="USER">کاربر</option>
+              <option value="WORKSHOP">تعمیرکار</option>
+          </select>
         </div>
         <button
           type="submit"
@@ -80,6 +122,12 @@ const AddUserForm: React.FC<{ onAddUser: (username: string, password: string) =>
     </div>
   );
 }
+
+const roleDisplay: Record<User['role'], string> = {
+    ADMIN: 'مدیر',
+    USER: 'کاربر',
+    WORKSHOP: 'تعمیرکار'
+};
 
 const UserListItem: React.FC<{ user: User, onChangePassword: (userId: string, newPassword: string) => string | null, onEditUser: (user: User) => void }> = ({ user, onChangePassword, onEditUser }) => {
     const [newPassword, setNewPassword] = useState('');
@@ -105,7 +153,7 @@ const UserListItem: React.FC<{ user: User, onChangePassword: (userId: string, ne
         <li className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 px-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg">
             <div>
                 <p className="text-lg font-medium text-gray-900 dark:text-gray-100">{user.username}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">نقش: کاربر</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">کد: {user.personnelCode} | نقش: {roleDisplay[user.role]}</p>
             </div>
             <div className="mt-4 sm:mt-0 w-full sm:w-auto flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2 sm:space-x-reverse">
                 <button
@@ -245,6 +293,9 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ user, vehicles, onClose, 
                         </select>
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400 space-y-2">
+                         <p><strong>کد پرسنلی:</strong> {user.personnelCode}</p>
+                         <p><strong>شماره تماس:</strong> {user.phone}</p>
+                         <p><strong>نقش:</strong> {roleDisplay[user.role]}</p>
                          <p><strong>تاریخ ثبت نام:</strong> {new Date(user.registrationDate).toLocaleDateString('fa-IR')}</p>
                          <p><strong>آخرین ورود:</strong> {user.lastLogin ? new Date(user.lastLogin).toLocaleString('fa-IR') : 'هرگز'}</p>
                     </div>

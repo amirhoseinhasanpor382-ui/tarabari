@@ -1,17 +1,18 @@
 import React from 'react';
 
-type AdminView = 'dashboard' | 'users' | 'settings' | 'managerDetails' | 'requests' | 'reports' | 'alerts' | 'vehicles';
+type AdminView = 'dashboard' | 'users' | 'settings' | 'managerDetails' | 'requests' | 'reports' | 'alerts' | 'vehicles' | 'workshop';
 
 interface SidebarProps {
   activeView: AdminView;
   setActiveView: (view: AdminView) => void;
   isOpen: boolean;
   setOpen: (isOpen: boolean) => void;
+  hasUnreadAlerts: boolean;
 }
 
 const NavItem: React.FC<{
   view: AdminView,
-  label: string,
+  label: React.ReactNode,
   Icon: React.ElementType,
   isActive: boolean,
   onClick: () => void
@@ -28,7 +29,7 @@ const NavItem: React.FC<{
       }`}
     >
       <Icon className="w-6 h-6" />
-      <span className="mr-4 font-medium">{label}</span>
+      <span className="mr-4 font-medium relative">{label}</span>
     </a>
   </li>
 );
@@ -84,8 +85,13 @@ const TruckIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+const WrenchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.83-5.83M11.42 15.17l-4.242-4.242a2.652 2.652 0 010-3.75l4.242-4.242a2.652 2.652 0 013.75 0l4.242 4.242a2.652 2.652 0 010 3.75l-4.242 4.242M11.42 15.17L15.17 11.42" />
+    </svg>
+);
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, setOpen, hasUnreadAlerts }) => {
     
   const handleNavClick = (view: AdminView) => {
     setActiveView(view);
@@ -101,6 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
     { view: 'managerDetails' as AdminView, label: 'جزئیات مدیران', Icon: IdentificationIcon },
     { view: 'users' as AdminView, label: 'مدیریت کارکنان', Icon: UsersIcon },
     { view: 'vehicles' as AdminView, label: 'مدیریت خودروها', Icon: TruckIcon },
+    { view: 'workshop' as AdminView, label: 'تعمیرگاه', Icon: WrenchIcon },
     { view: 'reports' as AdminView, label: 'گزارشات', Icon: DocumentTextIcon },
     { view: 'settings' as AdminView, label: 'تنظیمات', Icon: CogIcon },
   ];
@@ -128,7 +135,17 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
               <NavItem
                 key={item.view}
                 view={item.view}
-                label={item.label}
+                label={
+                  <>
+                    {item.label}
+                    {item.view === 'alerts' && hasUnreadAlerts && (
+                       <span className="absolute top-0 -right-2 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                      </span>
+                    )}
+                  </>
+                }
                 Icon={item.Icon}
                 isActive={activeView === item.view}
                 onClick={() => handleNavClick(item.view)}

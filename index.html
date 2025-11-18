@@ -13,6 +13,25 @@
       body {
         font-family: 'Vazirmatn', sans-serif;
       }
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        .printable-area, .printable-area * {
+          visibility: visible;
+        }
+        .printable-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+      }
+      /* The printable area is hidden from view but not from rendering to allow printing */
+      .printable-area {
+        visibility: hidden;
+        position: absolute;
+      }
     </style>
 <script type="importmap">
 {

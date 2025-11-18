@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import AdminLayout from './components/AdminLayout';
 import UserPanel from './components/UserPanel';
 import LoginPage from './components/LoginPage';
-import type { User, Request, Log, Vehicle, Trip, MaintenanceRecord, Alert } from './types';
+import type { User, Request, Log, Vehicle, Trip, MaintenanceRecord, Alert, ServiceOrder, ServiceOrderStatus } from './types';
+import WorkshopPanel from './components/WorkshopPanel';
 
 // Initial data for demonstration
 const initialUsers: User[] = [
-  { id: '1', username: 'admin', password: 'password', role: 'ADMIN', registrationDate: new Date('2023-01-01T10:00:00Z'), lastLogin: new Date() },
-  { id: '2', username: 'user1', password: 'password', role: 'USER', registrationDate: new Date('2023-02-15T11:20:00Z'), lastLogin: null },
-  { id: '3', username: 'user2', password: 'password', role: 'USER', registrationDate: new Date('2023-03-20T09:05:00Z'), lastLogin: new Date('2024-05-10T15:30:00Z') },
+  { id: '1', username: 'admin', password: 'password', role: 'ADMIN', personnelCode: '1000', phone: '09120000000', registrationDate: new Date('2023-01-01T10:00:00Z'), lastLogin: null },
+  { id: '2', username: 'user1', password: 'password', role: 'USER', personnelCode: '1001', phone: '09121111111', registrationDate: new Date('2023-02-15T11:20:00Z'), lastLogin: null },
+  { id: '3', username: 'user2', password: 'password', role: 'USER', personnelCode: '1002', phone: '09122222222', registrationDate: new Date('2023-03-20T09:05:00Z'), lastLogin: new Date('2024-05-10T15:30:00Z') },
+  { id: '4', username: 'تعمیرکار', password: 'password', role: 'WORKSHOP', personnelCode: '2001', phone: '09123333333', registrationDate: new Date('2024-07-21T09:00:00Z'), lastLogin: null },
 ];
 
 const initialRequests: Request[] = [
@@ -36,6 +38,10 @@ const initialMaintenanceRecords: MaintenanceRecord[] = [
     { id: 'maint4', vehicleId: 'v3', date: new Date('2024-06-01'), serviceType: 'تعمیر موتور', cost: 12000000 },
 ];
 
+const initialServiceOrders: ServiceOrder[] = [
+    { id: 'so1', vehicleId: 'v3', admissionDate: new Date('2024-06-15'), issueDescription: 'دود کردن بیش از حد موتور و کاهش قدرت.', status: 'در حال تعمیر', notes: 'سیلندرها نیاز به تراشکاری دارند. قطعات سفارش داده شده.' },
+];
+
 
 const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>(initialUsers);
@@ -46,6 +52,13 @@ const App: React.FC = () => {
   const [trips, setTrips] = useState<Trip[]>(initialTrips);
   const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>(initialMaintenanceRecords);
   const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [serviceOrders, setServiceOrders] = useState<ServiceOrder[]>(initialServiceOrders);
+  const [reportedOverdueOrders, setReportedOverdueOrders] = useState<string[]>([]);
+
+  // Admin unread alerts state
+  const adminAlertsStorageKey = 'lastSeenAdminAlertId';
+  const [lastSeenAdminAlertId, setLastSeenAdminAlertId] = useState<string | null>(() => localStorage.getItem(adminAlertsStorageKey));
+
 
   const addLog = (username: string, action: string) => {
     const newLog: Log = {
@@ -58,18 +71,25 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (username: string, password: string): boolean => {
-    const user = users.find(u => u.username === username && u.password === password);
-    if (user) {
-      const now = new Date();
-      setUsers(prevUsers => 
-        prevUsers.map(u => u.id === user.id ? { ...u, lastLogin: now } : u)
-      );
-      setLoggedInUser({ ...user, lastLogin: now });
-      addLog(username, 'ورود موفق به سیستم');
-      return true;
+    const user = users.find(u => u.username === username);
+
+    if (!user) {
+        addLog(username, 'تلاش برای ورود ناموفق (نام کاربری یافت نشد)');
+        return false;
     }
-    addLog(username, 'تلاش برای ورود ناموفق (رمز یا نام کاربری اشتباه)');
-    return false;
+
+    if (user.password !== password) {
+        addLog(username, 'تلاش برای ورود ناموفق (رمز عبور اشتباه)');
+        return false;
+    }
+
+    const now = new Date();
+    setUsers(prevUsers =>
+      prevUsers.map(u => u.id === user.id ? { ...u, lastLogin: now } : u)
+    );
+    setLoggedInUser({ ...user, lastLogin: now });
+    addLog(username, 'ورود موفق به سیستم');
+    return true;
   };
 
   const handleLogout = () => {
@@ -79,9 +99,18 @@ const App: React.FC = () => {
     setLoggedInUser(null);
   };
 
-  const handleAddUser = (username: string, password: string): string | null => {
+  const handleAddUser = (
+    username: string, 
+    password: string, 
+    role: 'USER' | 'WORKSHOP',
+    personnelCode: string,
+    phone: string
+  ): string | null => {
     if (users.some(u => u.username === username)) {
       return 'این نام کاربری قبلا استفاده شده است.';
+    }
+    if (users.some(u => u.personnelCode === personnelCode)) {
+      return 'این کد پرسنلی قبلا استفاده شده است.';
     }
     if (password.length > 8) {
       return 'رمز عبور نباید بیشتر از ۸ کاراکتر باشد.';
@@ -90,13 +119,15 @@ const App: React.FC = () => {
       id: new Date().getTime().toString(),
       username,
       password,
-      role: 'USER',
+      role,
+      personnelCode,
+      phone,
       registrationDate: new Date(),
       lastLogin: null,
     };
     setUsers(prevUsers => [...prevUsers, newUser]);
     if (loggedInUser) {
-        addLog(loggedInUser.username, `کاربر جدید "${username}" را اضافه کرد.`);
+        addLog(loggedInUser.username, `کاربر جدید "${username}" با کد پرسنلی "${personnelCode}" را اضافه کرد.`);
     }
     return null;
   };
@@ -302,6 +333,54 @@ const App: React.FC = () => {
     }
     return null;
   };
+  
+  const handleAddServiceOrder = (vehicleId: string, issueDescription: string) => {
+    if (!loggedInUser) return;
+    const newOrder: ServiceOrder = {
+        id: new Date().getTime().toString(),
+        vehicleId,
+        admissionDate: new Date(),
+        issueDescription,
+        status: 'پذیرش شده',
+    };
+    setServiceOrders(prev => [newOrder, ...prev]);
+    setVehicles(prev => prev.map(v => v.id === vehicleId ? { ...v, status: 'در دست تعمیر' } : v));
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (vehicle) {
+        addLog(loggedInUser.username, `خودروی "${vehicle.type} (${vehicle.code})" را برای تعمیر پذیرش کرد.`);
+    }
+  };
+
+  const handleUpdateServiceOrder = (orderId: string, newStatus: ServiceOrderStatus, notes?: string) => {
+    if (!loggedInUser) return;
+    let vehicleToUpdate: Vehicle | undefined;
+    setServiceOrders(prev => prev.map(order => {
+        if (order.id === orderId) {
+            vehicleToUpdate = vehicles.find(v => v.id === order.vehicleId);
+            return { ...order, status: newStatus, notes: notes || order.notes };
+        }
+        return order;
+    }));
+
+    if (vehicleToUpdate && newStatus === 'تحویل داده شده') {
+        setVehicles(prev => prev.map(v => v.id === vehicleToUpdate!.id ? { ...v, status: 'در دسترس' } : v));
+        addLog(loggedInUser.username, `تعمیرات خودروی "${vehicleToUpdate.type} (${vehicleToUpdate.code})" را تکمیل و تحویل داد.`);
+    } else if (vehicleToUpdate) {
+        addLog(loggedInUser.username, `وضعیت تعمیر خودروی "${vehicleToUpdate.type} (${vehicleToUpdate.code})" را به "${newStatus}" تغییر داد.`);
+    }
+  };
+
+  const handleSendOverdueReport = (order: ServiceOrder, vehicle: Vehicle, explanation: string) => {
+    if (!loggedInUser) return;
+    const title = `هشدار تاخیر در تحویل خودرو: ${vehicle.type} (${vehicle.code})`;
+    const message = `خودروی "${vehicle.type}" با کد "${vehicle.code}" که در تاریخ ${new Date(order.admissionDate).toLocaleDateString('fa-IR')} پذیرش شده، با تاخیر مواجه است.
+
+توضیحات تعمیرکار:
+${explanation}`;
+
+    handleAddAlert(title, message, 'همه مدیران');
+    setReportedOverdueOrders(prev => [...prev, order.id]);
+  };
 
 
   const LogoutIcon = () => (
@@ -318,6 +397,84 @@ const App: React.FC = () => {
   const userMaintenanceRecords = assignedVehicle 
     ? maintenanceRecords.filter(m => m.vehicleId === assignedVehicle.id) 
     : [];
+  const activeServiceOrder = assignedVehicle
+    ? serviceOrders.find(so => so.vehicleId === assignedVehicle.id && so.status !== 'تحویل داده شده')
+    : undefined;
+
+  const allAdminAlerts = alerts.filter(a => a.target === 'همه مدیران');
+  const latestAdminAlert = allAdminAlerts.length > 0 ? allAdminAlerts[0] : null;
+  const hasUnreadAdminAlerts = latestAdminAlert ? latestAdminAlert.id !== lastSeenAdminAlertId : false;
+
+  const handleAdminAlertsView = () => {
+    if (latestAdminAlert) {
+      localStorage.setItem(adminAlertsStorageKey, latestAdminAlert.id);
+      setLastSeenAdminAlertId(latestAdminAlert.id);
+    }
+  };
+
+
+  const renderPanel = () => {
+    switch (loggedInUser.role) {
+      case 'ADMIN':
+        return (
+          <AdminLayout
+            loggedInUser={loggedInUser}
+            users={users}
+            onAddUser={handleAddUser}
+            onChangePassword={handleChangePassword}
+            requests={requests}
+            onProcessRequest={handleProcessRequest}
+            onApproveRequest={handleApproveRequest}
+            onFinalizeRequest={handleFinalizeRequest}
+            onUpdateProfile={handleUpdateProfile}
+            logs={logs}
+            vehicles={vehicles}
+            trips={trips}
+            maintenanceRecords={maintenanceRecords}
+            onAddMaintenanceRecord={handleAddMaintenanceRecord}
+            onAddVehicle={handleAddVehicle}
+            alerts={alerts}
+            onAddAlert={handleAddAlert}
+            onAssignVehicle={handleAssignVehicle}
+            serviceOrders={serviceOrders}
+            onAddServiceOrder={handleAddServiceOrder}
+            onUpdateServiceOrder={handleUpdateServiceOrder}
+            hasUnreadAlerts={hasUnreadAdminAlerts}
+            onViewAdminAlerts={handleAdminAlertsView}
+          />
+        );
+      case 'WORKSHOP':
+        return (
+            <WorkshopPanel
+                users={users}
+                vehicles={vehicles}
+                serviceOrders={serviceOrders}
+                onAddServiceOrder={handleAddServiceOrder}
+                onUpdateServiceOrder={handleUpdateServiceOrder}
+                reportedOverdueOrders={reportedOverdueOrders}
+                onSendOverdueReport={handleSendOverdueReport}
+            />
+        );
+      case 'USER':
+      default:
+        return (
+          <UserPanel
+            user={loggedInUser}
+            onAddRequest={handleAddRequest}
+            userRequests={requests.filter(req => req.username === loggedInUser.username)}
+            onUpdateProfile={handleUpdateProfile}
+            alerts={alerts.filter(alert =>
+                alert.target === 'همه کاربران' ||
+                (alert.target === 'کاربران خاص' && alert.targetUsernames?.includes(loggedInUser.username))
+            )}
+            assignedVehicle={assignedVehicle}
+            maintenanceRecords={userMaintenanceRecords}
+            activeServiceOrder={activeServiceOrder}
+          />
+        );
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
@@ -339,41 +496,7 @@ const App: React.FC = () => {
       </header>
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {loggedInUser.role === 'ADMIN' ? (
-          <AdminLayout
-            loggedInUser={loggedInUser}
-            users={users}
-            onAddUser={handleAddUser}
-            onChangePassword={handleChangePassword}
-            requests={requests}
-            onProcessRequest={handleProcessRequest}
-            onApproveRequest={handleApproveRequest}
-            onFinalizeRequest={handleFinalizeRequest}
-            onUpdateProfile={handleUpdateProfile}
-            logs={logs}
-            vehicles={vehicles}
-            trips={trips}
-            maintenanceRecords={maintenanceRecords}
-            onAddMaintenanceRecord={handleAddMaintenanceRecord}
-            onAddVehicle={handleAddVehicle}
-            alerts={alerts}
-            onAddAlert={handleAddAlert}
-            onAssignVehicle={handleAssignVehicle}
-          />
-        ) : (
-          <UserPanel
-            user={loggedInUser}
-            onAddRequest={handleAddRequest}
-            userRequests={requests.filter(req => req.username === loggedInUser.username)}
-            onUpdateProfile={handleUpdateProfile}
-            alerts={alerts.filter(alert =>
-                alert.target === 'همه کاربران' ||
-                (alert.target === 'کاربران خاص' && alert.targetUsernames?.includes(loggedInUser.username))
-            )}
-            assignedVehicle={assignedVehicle}
-            maintenanceRecords={userMaintenanceRecords}
-          />
-        )}
+        {renderPanel()}
       </main>
     </div>
   );

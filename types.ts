@@ -2,7 +2,9 @@ export interface User {
   id: string;
   username: string;
   password: string;
-  role: 'ADMIN' | 'USER';
+  role: 'ADMIN' | 'USER' | 'WORKSHOP';
+  personnelCode: string;
+  phone: string;
   registrationDate: Date;
   lastLogin: Date | null;
 }
@@ -17,7 +19,7 @@ export interface Manager {
 }
 
 export interface Request {
-  id: string;
+  id:string;
   username: string;
   title: string;
   description: string;
@@ -69,4 +71,24 @@ export interface Alert {
   targetUsernames?: string[];
   createdAt: Date;
   sender: string;
+}
+
+export const ServiceOrderStatuses = [
+  'پذیرش شده',
+  'در حال بررسی',
+  'منتظر قطعه',
+  'در حال تعمیر',
+  'آماده تحویل',
+  'تحویل داده شده',
+] as const;
+
+export type ServiceOrderStatus = typeof ServiceOrderStatuses[number];
+
+export interface ServiceOrder {
+  id: string;
+  vehicleId: string;
+  admissionDate: Date;
+  issueDescription: string;
+  status: ServiceOrderStatus;
+  notes?: string;
 }

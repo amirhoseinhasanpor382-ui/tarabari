@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import type { User, Request, Alert as AlertType, Vehicle, MaintenanceRecord } from '../types';
+import type { User, Request, Alert as AlertType, Vehicle, MaintenanceRecord, ServiceOrder, ServiceOrderStatus } from '../types';
+import { ServiceOrderStatuses } from '../types';
 
 type RequestType = 'مرخصی' | 'کارت سوخت' | 'ترفیع';
 type RequestRecipient = 'مدیریت' | 'مدیر 1' | 'مدیر 2';
@@ -13,6 +14,7 @@ interface UserPanelProps {
   alerts: AlertType[];
   assignedVehicle?: Vehicle;
   maintenanceRecords: MaintenanceRecord[];
+  activeServiceOrder?: ServiceOrder;
 }
 
 const requestTypes: RequestType[] = ['مرخصی', 'کارت سوخت', 'ترفیع'];
@@ -72,6 +74,13 @@ const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
       <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
   </svg>
 );
+
+const WrenchScrewdriverIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.83-5.83M11.42 15.17l-4.242-4.242a2.652 2.652 0 010-3.75l4.242-4.242a2.652 2.652 0 013.75 0l4.242 4.242a2.652 2.652 0 010 3.75l-4.242 4.242M11.42 15.17L15.17 11.42" />
+    </svg>
+);
+
 
 const Alert: React.FC<{ message: string; type: 'error' | 'success'; onClose: () => void }> = ({ message, type, onClose }) => {
     const colors = {
@@ -186,14 +195,64 @@ const getVehicleStatusBadge = (status: Vehicle['status']) => {
   }
 };
 
+const RepairStatusTracker: React.FC<{ serviceOrder: ServiceOrder }> = ({ serviceOrder }) => {
+    const currentStatusIndex = ServiceOrderStatuses.indexOf(serviceOrder.status);
 
-const UserPanel: React.FC<UserPanelProps> = ({ user, onAddRequest, userRequests, onUpdateProfile, alerts, assignedVehicle, maintenanceRecords }) => {
+    return (
+        <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-6 flex items-center">
+                <WrenchScrewdriverIcon className="w-6 h-6 ml-3 text-yellow-500"/>
+                وضعیت تعمیرگاه
+            </h4>
+            <div className="space-y-4">
+                <div className="mb-6">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">علت مراجعه:</p>
+                    <p className="font-medium text-gray-800 dark:text-gray-100">{serviceOrder.issueDescription}</p>
+                </div>
+                <div className="relative">
+                    <div className="absolute left-1/2 -translate-x-1/2 w-0.5 h-full bg-gray-300 dark:bg-gray-600" style={{ right: '1rem', zIndex: 0}}></div>
+                    <ul className="space-y-8">
+                        {ServiceOrderStatuses.map((status, index) => {
+                            const isActive = index === currentStatusIndex;
+                            const isCompleted = index < currentStatusIndex;
+                            return (
+                                <li key={status} className="flex items-center relative z-10">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0
+                                        ${isCompleted ? 'bg-green-500' : isActive ? 'bg-yellow-500' : 'bg-gray-300 dark:bg-gray-600'}`
+                                    }>
+                                        {isCompleted ? (
+                                            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                                        ) : isActive ? (
+                                            <div className="w-4 h-4 bg-white rounded-full"></div>
+                                        ) : null}
+                                    </div>
+                                    <span className={`mr-4 font-medium ${isActive ? 'text-gray-800 dark:text-gray-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        {status}
+                                    </span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+                 {serviceOrder.notes && (
+                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">یادداشت تعمیرگاه:</p>
+                        <p className="font-medium text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{serviceOrder.notes}</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+
+const UserPanel: React.FC<UserPanelProps> = ({ user, onAddRequest, userRequests, onUpdateProfile, alerts, assignedVehicle, maintenanceRecords, activeServiceOrder }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<RequestType>(requestTypes[0]);
   const [recipient, setRecipient] = useState<RequestRecipient>(requestRecipients[0]);
   
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(true);
   const [activeView, setActiveView] = useState<MenuView>('requests');
   const [reportSearchTerm, setReportSearchTerm] = useState('');
 
@@ -502,7 +561,10 @@ const UserPanel: React.FC<UserPanelProps> = ({ user, onAddRequest, userRequests,
                 اینجا داشبورد شماست. برای ثبت درخواست جدید، مشاهده تاریخچه درخواست‌ها یا تغییر تنظیمات، از دکمه <strong>مشاهده پنل</strong> در بالا استفاده کنید.
                 {hasUnread && <span className="block mt-2 font-semibold text-red-600 dark:text-red-400">شما یک هشدار جدید دارید!</span>}
             </p>
-            {assignedVehicle && (
+            
+            {assignedVehicle && activeServiceOrder ? (
+                 <RepairStatusTracker serviceOrder={activeServiceOrder} />
+            ) : assignedVehicle ? (
               <div className="mt-8 p-6 bg-gray-50 dark:bg-gray-700/30 rounded-lg border border-gray-200 dark:border-gray-700">
                 <h4 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-4 flex items-center">
                     <TruckIcon className="w-6 h-6 ml-3 text-indigo-500"/>
@@ -527,7 +589,8 @@ const UserPanel: React.FC<UserPanelProps> = ({ user, onAddRequest, userRequests,
                     </div>
                 </div>
               </div>
-            )}
+            ) : null}
+
         </div>
       </div>
     </>
