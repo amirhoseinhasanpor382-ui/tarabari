@@ -64,9 +64,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </div>
           </form>
         </div>
-        <div className="text-center mt-4 text-sm text-gray-500 dark:text-gray-400">
-            <p>سازنده : امیرحسین</p>
-        </div>
       </div>
     </div>
   );

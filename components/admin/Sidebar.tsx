@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 type AdminView = 'dashboard' | 'users' | 'settings' | 'managerDetails' | 'requests' | 'reports' | 'alerts' | 'vehicles' | 'workshop';
@@ -24,12 +25,14 @@ const NavItem: React.FC<{
         e.preventDefault();
         onClick();
       }}
-      className={`flex items-center p-3 my-1 rounded-lg text-white transition-colors duration-200 ${
-        isActive ? 'bg-indigo-600 shadow-md' : 'hover:bg-gray-700'
+      className={`flex items-center p-3 my-1.5 rounded-xl transition-all duration-300 group ${
+        isActive 
+          ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30 translate-x-1' 
+          : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
       }`}
     >
-      <Icon className="w-6 h-6" />
-      <span className="mr-4 font-medium relative">{label}</span>
+      <Icon className={`w-6 h-6 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
+      <span className="mr-3 font-medium relative tracking-wide">{label}</span>
     </a>
   </li>
 );
@@ -48,7 +51,7 @@ const UsersIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 const CogIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
 );
@@ -81,7 +84,7 @@ const TruckIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2 2h8a1 1 0 001-1z" />
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16h2a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4-2H5M17 16l-4-4" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16h2a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4-2H5M17 16l-4-4" />
   </svg>
 );
 
@@ -101,36 +104,45 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
   }
 
   const navItems = [
-    { view: 'dashboard' as AdminView, label: 'آمار', Icon: ChartBarIcon },
-    { view: 'alerts' as AdminView, label: 'هشدارها', Icon: BellIcon },
-    { view: 'requests' as AdminView, label: 'درخواست ها', Icon: ClipboardListIcon },
-    { view: 'managerDetails' as AdminView, label: 'جزئیات مدیران', Icon: IdentificationIcon },
+    { view: 'dashboard' as AdminView, label: 'آمار و گزارشات', Icon: ChartBarIcon },
+    { view: 'alerts' as AdminView, label: 'هشدارها و اعلانات', Icon: BellIcon },
+    { view: 'requests' as AdminView, label: 'مدیریت درخواست‌ها', Icon: ClipboardListIcon },
+    { view: 'managerDetails' as AdminView, label: 'لیست مدیران', Icon: IdentificationIcon },
     { view: 'users' as AdminView, label: 'مدیریت کارکنان', Icon: UsersIcon },
-    { view: 'vehicles' as AdminView, label: 'مدیریت خودروها', Icon: TruckIcon },
-    { view: 'workshop' as AdminView, label: 'تعمیرگاه', Icon: WrenchIcon },
-    { view: 'reports' as AdminView, label: 'گزارشات', Icon: DocumentTextIcon },
-    { view: 'settings' as AdminView, label: 'تنظیمات', Icon: CogIcon },
+    { view: 'vehicles' as AdminView, label: 'ناوگان خودرویی', Icon: TruckIcon },
+    { view: 'workshop' as AdminView, label: 'تعمیرگاه مرکزی', Icon: WrenchIcon },
+    { view: 'reports' as AdminView, label: 'گزارش‌گیری جامع', Icon: DocumentTextIcon },
+    { view: 'settings' as AdminView, label: 'تنظیمات سیستم', Icon: CogIcon },
   ];
 
   return (
     <>
       {/* Overlay for mobile */}
       <div 
-        className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-30 transition-opacity lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setOpen(false)}
       ></div>
 
-      <aside className={`fixed lg:relative top-0 right-0 h-full bg-gray-800 shadow-xl text-white w-64 p-4 z-40 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0`}>
-        <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold">پنل مدیریت</h2>
-            <button onClick={() => setOpen(false)} className="lg:hidden text-gray-400 hover:text-white">
+      <aside className={`fixed lg:relative top-0 right-0 h-full bg-gray-900 text-white w-72 p-6 z-40 transform transition-transform duration-300 ease-in-out shadow-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 border-l border-gray-800`}>
+        <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center space-x-3 space-x-reverse">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                    <TruckIcon className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold tracking-tight">پنل مدیریت</h2>
+                    <p className="text-xs text-gray-400">سیستم ترابری سنگین</p>
+                </div>
+            </div>
+            <button onClick={() => setOpen(false)} className="lg:hidden text-gray-400 hover:text-white transition-colors">
                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
         </div>
-        <nav>
-          <ul>
+
+        <nav className="space-y-1">
+          <ul className="space-y-2">
             {navItems.map(item => (
               <NavItem
                 key={item.view}
@@ -139,9 +151,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isOpen, se
                   <>
                     {item.label}
                     {item.view === 'alerts' && hasUnreadAlerts && (
-                       <span className="absolute top-0 -right-2 flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                       <span className="absolute top-0 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 border-2 border-gray-900"></span>
                       </span>
                     )}
                   </>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { User, Manager, Request, Log, Vehicle, Trip, MaintenanceRecord, Alert, ServiceOrder, ServiceOrderStatus } from '../types';
 import Sidebar from './admin/Sidebar';
@@ -38,6 +39,7 @@ interface AdminLayoutProps {
   onUpdateServiceOrder: (orderId: string, newStatus: ServiceOrderStatus, notes?: string) => void;
   hasUnreadAlerts: boolean;
   onViewAdminAlerts: () => void;
+  onUpdateTripQueue?: (tripId: string, arrivalDate: Date, location: 'انبار مرکزی' | 'پاندا' | 'شهر لبنیات') => void;
 }
 
 const initialManagers: Manager[] = [
@@ -60,7 +62,7 @@ const initialManagers: Manager[] = [
 ];
 
 const AdminLayout: React.FC<AdminLayoutProps> = (props) => {
-  const { loggedInUser, users, requests, onUpdateProfile, onAddVehicle, hasUnreadAlerts, onViewAdminAlerts } = props;
+  const { loggedInUser, users, requests, onUpdateProfile, onAddVehicle, hasUnreadAlerts, onViewAdminAlerts, onUpdateTripQueue } = props;
   const [activeView, setActiveView] = useState<AdminView>('dashboard');
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isAdmissionOpen, setAdmissionOpen] = useState(false);
@@ -77,7 +79,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = (props) => {
   const renderContent = () => {
     switch (activeView) {
       case 'dashboard':
-        return <Dashboard requestsCount={pendingRequestsCount} />;
+        return (
+          <Dashboard 
+            requestsCount={pendingRequestsCount} 
+            trips={props.trips}
+            vehicles={props.vehicles}
+            users={props.users}
+            onUpdateTripQueue={onUpdateTripQueue}
+          />
+        );
       case 'users':
         return <UserManagement 
                     users={users.filter(u => u.role !== 'ADMIN')} 
@@ -111,7 +121,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = (props) => {
       case 'workshop': {
         const handleAddServiceOrder = (vehicleId: string, issueDescription: string) => {
           props.onAddServiceOrder(vehicleId, issueDescription);
-          setAdmissionOpen(false); // Close slide-over after submission
+          setAdmissionOpen(false);
         };
         const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (iconProps) => (
             <svg {...iconProps} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,7 +157,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = (props) => {
         );
       }
       default:
-        return <Dashboard requestsCount={pendingRequestsCount} />;
+        return (
+          <Dashboard 
+            requestsCount={pendingRequestsCount} 
+            trips={props.trips}
+            vehicles={props.vehicles}
+            users={props.users}
+            onUpdateTripQueue={onUpdateTripQueue}
+          />
+        );
     }
   };
   
@@ -165,14 +183,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = (props) => {
 
   return (
     <div className="flex h-full">
-       <Sidebar
+      {/* In RTL mode, the first flex item (Sidebar) will be on the right */}
+      <Sidebar
           activeView={activeView}
           setActiveView={handleSetActiveView}
           isOpen={isSidebarOpen}
           setOpen={setSidebarOpen}
           hasUnreadAlerts={hasUnreadAlerts}
         />
-
+        
       <div className="flex-1 flex flex-col w-full">
          <header className="lg:hidden bg-white dark:bg-gray-800 dark:border-b dark:border-gray-700 shadow-sm p-4 flex justify-between items-center">
             <h2 className="text-xl font-bold dark:text-gray-100">{viewTitles[activeView]}</h2>

@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import AdminLayout from './components/AdminLayout';
 import UserPanel from './components/UserPanel';
 import LoginPage from './components/LoginPage';
 import type { User, Request, Log, Vehicle, Trip, MaintenanceRecord, Alert, ServiceOrder, ServiceOrderStatus } from './types';
 import WorkshopPanel from './components/WorkshopPanel';
+import SystemAdminPanel from './components/SystemAdminPanel';
 
 // Initial data for demonstration
 const initialUsers: User[] = [
@@ -11,6 +13,7 @@ const initialUsers: User[] = [
   { id: '2', username: 'user1', password: 'password', role: 'USER', personnelCode: '1001', phone: '09121111111', registrationDate: new Date('2023-02-15T11:20:00Z'), lastLogin: null },
   { id: '3', username: 'user2', password: 'password', role: 'USER', personnelCode: '1002', phone: '09122222222', registrationDate: new Date('2023-03-20T09:05:00Z'), lastLogin: new Date('2024-05-10T15:30:00Z') },
   { id: '4', username: 'تعمیرکار', password: 'password', role: 'WORKSHOP', personnelCode: '2001', phone: '09123333333', registrationDate: new Date('2024-07-21T09:00:00Z'), lastLogin: null },
+  { id: '5', username: 'root', password: 'password', role: 'SYSTEM_ADMIN', personnelCode: '0000', phone: '0000000000', registrationDate: new Date('2023-01-01T00:00:00Z'), lastLogin: null },
 ];
 
 const initialRequests: Request[] = [
@@ -26,9 +29,12 @@ const initialVehicles: Vehicle[] = [
 ];
 
 const initialTrips: Trip[] = [
-  { id: 't1', vehicleId: 'v1', driverId: '2', origin: 'تهران', destination: 'بندرعباس', startDate: new Date('2024-07-15'), endDate: null, status: 'در حال انجام' },
-  { id: 't2', vehicleId: 'v2', driverId: '3', origin: 'اصفهان', destination: 'مشهد', startDate: new Date('2024-07-10'), endDate: new Date('2024-07-14'), status: 'تکمیل شده' },
-  { id: 't3', vehicleId: 'v2', driverId: '3', origin: 'شیراز', destination: 'تبریز', startDate: new Date('2024-07-20'), endDate: null, status: 'برنامه ریزی شده' },
+  { id: 't1', vehicleId: 'v1', driverId: '2', origin: 'تهران', destination: 'بندرعباس', startDate: new Date('2024-07-15'), endDate: null, status: 'در حال انجام', cargoType: 'بستنی', distance: 2560 },
+  { id: 't2', vehicleId: 'v2', driverId: '3', origin: 'اصفهان', destination: 'مشهد', startDate: new Date('2024-07-10'), endDate: new Date('2024-07-14'), status: 'تکمیل شده', cargoType: 'لبنیات', distance: 2400 },
+  { id: 't3', vehicleId: 'v2', driverId: '3', origin: 'شیراز', destination: 'تبریز', startDate: new Date('2024-07-20'), endDate: null, status: 'برنامه ریزی شده', cargoType: 'بستنی', distance: 3100 },
+  // Add recent completed trips for calculation demo
+  { id: 't4', vehicleId: 'v1', driverId: '2', origin: 'تهران', destination: 'رشت', startDate: new Date(), endDate: new Date(), status: 'تکمیل شده', cargoType: 'لبنیات', distance: 650 },
+  { id: 't5', vehicleId: 'v1', driverId: '2', origin: 'تهران', destination: 'تبریز', startDate: new Date(), endDate: new Date(), status: 'تکمیل شده', cargoType: 'بستنی', distance: 1260 },
 ];
 
 const initialMaintenanceRecords: MaintenanceRecord[] = [
@@ -333,6 +339,73 @@ const App: React.FC = () => {
     }
     return null;
   };
+
+  const handleAddTrip = (tripData: Omit<Trip, 'id' | 'status'>) => {
+      if (!loggedInUser) return;
+      
+      // 1. Check for existing active trip for this driver and mark it COMPLETED
+      setTrips(prevTrips => {
+          const updatedTrips = prevTrips.map(trip => {
+              if (trip.driverId === tripData.driverId && (trip.status === 'در حال انجام' || trip.status === 'برنامه ریزی شده')) {
+                  return {
+                      ...trip,
+                      status: 'تکمیل شده' as const,
+                      endDate: new Date() // Set end date to now
+                  };
+              }
+              return trip;
+          });
+
+          // 2. Add the new trip
+          const newTrip: Trip = {
+            id: new Date().getTime().toString(),
+            status: 'برنامه ریزی شده', // Start as planned
+            ...tripData
+          };
+          
+          return [newTrip, ...updatedTrips];
+      });
+      
+      // Update vehicle status to 'On Route'
+      setVehicles(prev => prev.map(v => 
+        v.id === tripData.vehicleId ? { ...v, status: 'در مسیر' } : v
+      ));
+
+      const driver = users.find(u => u.id === tripData.driverId);
+      addLog(loggedInUser.username, `سفر قبلی راننده "${driver?.username}" تکمیل و سفر جدید به مقصد "${tripData.destination}" ثبت شد.`);
+  };
+
+  const handleUpdateTripQueue = (tripId: string, arrivalDate: Date, location: 'انبار مرکزی' | 'پاندا' | 'شهر لبنیات') => {
+      // Find the trip to get the vehicle ID
+      const trip = trips.find(t => t.id === tripId);
+      
+      setTrips(prevTrips => 
+          prevTrips.map(t => 
+              t.id === tripId 
+                  ? { 
+                      ...t, 
+                      warehouseArrivalDate: arrivalDate, 
+                      warehouseLocation: location,
+                      status: 'تکمیل شده', // Mark as completed
+                      endDate: arrivalDate // Set end date to arrival date
+                    } 
+                  : t
+          )
+      );
+
+      // Free up the vehicle if we found the trip info
+      if (trip) {
+          setVehicles(prevVehicles => 
+              prevVehicles.map(v => 
+                  v.id === trip.vehicleId ? { ...v, status: 'در دسترس' } : v
+              )
+          );
+      }
+
+      if(loggedInUser) {
+         addLog(loggedInUser.username, `نوبت دهی برای سفر ${tripId} ثبت شد: ${location} - ${arrivalDate.toLocaleTimeString('fa-IR')}. وضعیت سفر تکمیل و خودرو آزاد شد.`);
+      }
+  };
   
   const handleAddServiceOrder = (vehicleId: string, issueDescription: string) => {
     if (!loggedInUser) return;
@@ -415,6 +488,19 @@ ${explanation}`;
 
   const renderPanel = () => {
     switch (loggedInUser.role) {
+      case 'SYSTEM_ADMIN':
+        return (
+            <SystemAdminPanel
+                user={loggedInUser}
+                users={users}
+                vehicles={vehicles}
+                trips={trips}
+                onAddTrip={handleAddTrip}
+                onUpdateProfile={handleUpdateProfile}
+                onUpdateTripQueue={handleUpdateTripQueue}
+                maintenanceRecords={maintenanceRecords}
+            />
+        );
       case 'ADMIN':
         return (
           <AdminLayout
@@ -441,6 +527,7 @@ ${explanation}`;
             onUpdateServiceOrder={handleUpdateServiceOrder}
             hasUnreadAlerts={hasUnreadAdminAlerts}
             onViewAdminAlerts={handleAdminAlertsView}
+            onUpdateTripQueue={handleUpdateTripQueue}
           />
         );
       case 'WORKSHOP':
@@ -470,6 +557,7 @@ ${explanation}`;
             assignedVehicle={assignedVehicle}
             maintenanceRecords={userMaintenanceRecords}
             activeServiceOrder={activeServiceOrder}
+            userTrips={trips.filter(trip => trip.driverId === loggedInUser.id)}
           />
         );
     }

@@ -126,7 +126,8 @@ const AddUserForm: React.FC<{ onAddUser: (username: string, password: string, ro
 const roleDisplay: Record<User['role'], string> = {
     ADMIN: 'مدیر',
     USER: 'کاربر',
-    WORKSHOP: 'تعمیرکار'
+    WORKSHOP: 'تعمیرکار',
+    SYSTEM_ADMIN: 'مدیر سیستم'
 };
 
 const UserListItem: React.FC<{ user: User, onChangePassword: (userId: string, newPassword: string) => string | null, onEditUser: (user: User) => void }> = ({ user, onChangePassword, onEditUser }) => {

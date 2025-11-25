@@ -1,8 +1,9 @@
+
 export interface User {
   id: string;
   username: string;
   password: string;
-  role: 'ADMIN' | 'USER' | 'WORKSHOP';
+  role: 'ADMIN' | 'USER' | 'WORKSHOP' | 'SYSTEM_ADMIN';
   personnelCode: string;
   phone: string;
   registrationDate: Date;
@@ -61,6 +62,11 @@ export interface Trip {
   startDate: Date;
   endDate: Date | null;
   status: 'در حال انجام' | 'تکمیل شده' | 'برنامه ریزی شده';
+  cargoType: string;
+  distance: number; // Round trip distance in KM
+  // New fields for queueing
+  warehouseArrivalDate?: Date;
+  warehouseLocation?: 'انبار مرکزی' | 'پاندا' | 'شهر لبنیات';
 }
 
 export interface Alert {
